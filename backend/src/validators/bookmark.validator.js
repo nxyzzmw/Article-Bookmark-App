@@ -12,10 +12,14 @@ export const addBookmarkValidator = [
     .notEmpty().withMessage("URL is required")
     .isURL().withMessage("Invalid URL"),
 
-  body("type")
-    .optional()
-    .isIn(["article", "video", "podcast"])
-    .withMessage("Type must be article, video, or podcast")
+  body("category")
+    .notEmpty().withMessage("Category is required")
+    .isString().withMessage("Category must be String"),
+
+  body("description")
+    .notEmpty().withMessage("Description is required")
+    .isString().withMessage("Description must be string")
+
 ];
 
 /* ---------- Update Bookmark ---------- */
@@ -30,7 +34,7 @@ export const updateBookmarkValidator = [
 
   body("status")
     .optional()
-    .isIn(["unread", "read", "listened"])
+    .isIn(["unread", "read"])
     .withMessage("Invalid status"),
 
   body("title")
@@ -41,27 +45,7 @@ export const updateBookmarkValidator = [
     .optional()
     .isURL(),
 
-  body("type")
+  body("category")
     .optional()
-    .isIn(["article", "video", "podcast"])
-];
-
-/* ---------- Delete Bookmark ---------- */
-export const deleteBookmarkValidator = [
-  param("id")
-    .custom(value => mongoose.Types.ObjectId.isValid(value))
-    .withMessage("Invalid bookmark ID")
-];
-
-/* ---------- Get Bookmarks (Filters) ---------- */
-export const getBookmarksValidator = [
-  query("status")
-    .optional()
-    .isIn(["unread", "read", "listened"])
-    .withMessage("Invalid status filter"),
-
-  query("type")
-    .optional()
-    .isIn(["article", "video", "podcast"])
-    .withMessage("Invalid type filter")
+    
 ];
