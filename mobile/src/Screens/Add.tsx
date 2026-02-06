@@ -1,3 +1,5 @@
+// Add.tsx
+
 import React, { useState } from 'react';
 import {
   View,
@@ -8,18 +10,27 @@ import {
   Button,
   Alert,
 } from 'react-native';
-
-import {} from 'react-native-image-picker';
 import axios from 'axios';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
 export default function Add() {
-  const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+
+  //  If coming from Edit → article exists
+  const editingArticle = route.params?.article;
+
+  //  Pre-fill fields when editing
+  const [url, setUrl] = useState(editingArticle?.url || '');
+  const [title, setTitle] = useState(editingArticle?.title || '');
+  const [description, setDescription] = useState(
+    editingArticle?.description || ''
+  );
 
   const [errors, setErrors] = useState({
     url: '',
     title: '',
+    description: '',
     category: '',
   });
 
@@ -29,15 +40,17 @@ export default function Add() {
     'Design',
     'Finance',
   ]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+
+  const [selectedCategory, setSelectedCategory] = useState(
+    editingArticle?.category || null
+  );
+
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-
   const [loading, setLoading] = useState(false);
 
   const addCategory = () => {
     if (!newCategory.trim()) return;
-
     setCategories([...categories, newCategory]);
     setNewCategory('');
     setShowCategoryInput(false);
@@ -47,13 +60,15 @@ export default function Add() {
     const newErrors = {
       url: '',
       title: '',
+      description: '',
       category: '',
     };
 
     const trimmedUrl = url.trim();
     const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
 
-    const isValidUrl = value => {
+    const isValidUrl = (value: string) => {
       try {
         const parsed = new URL(value);
         return parsed.protocol === 'http:' || parsed.protocol === 'https:';
@@ -62,23 +77,24 @@ export default function Add() {
       }
     };
 
-    if (!trimmedUrl) {
-      newErrors.url = 'URL is required';
-    } else if (!isValidUrl(trimmedUrl)) {
+    if (!trimmedUrl) newErrors.url = 'URL is required';
+    else if (!isValidUrl(trimmedUrl))
       newErrors.url = 'Enter a valid URL';
-    }
 
-    if (!trimmedTitle) {
-      newErrors.title = 'Title is required';
-    }
-
-    if (!selectedCategory) {
+    if (!trimmedTitle) newErrors.title = 'Title is required';
+    if (!trimmedDescription)
+      newErrors.description = 'Description is required';
+    if (!selectedCategory)
       newErrors.category = 'Select a category';
-    }
 
     setErrors(newErrors);
 
-    return !newErrors.url && !newErrors.title && !newErrors.category;
+    return (
+      !newErrors.url &&
+      !newErrors.title &&
+      !newErrors.description &&
+      !newErrors.category
+    );
   };
 
   const handleSubmit = async () => {
@@ -87,18 +103,33 @@ export default function Add() {
     const data = {
       url: url.trim(),
       title: title.trim(),
-      description,
+      description: description.trim(),
       category: selectedCategory,
-      image: coverImage,
     };
 
     try {
       setLoading(true);
-      await axios.post('http://10.0.2.2:5000/bookmarks', data); //jana TODO endpoints
-      Alert.alert('Saved!');
+
+      if (editingArticle) {
+        // ✅ Update existing bookmark
+        await axios.put(
+          `http://10.0.2.2:5000/bookmarks/${editingArticle._id}`,
+          data
+        );
+        Alert.alert('Updated!');
+      } else {
+        // ✅ Create new bookmark
+        await axios.post(
+          'http://10.0.2.2:5000/bookmarks',
+          data
+        );
+        Alert.alert('Saved!');
+      }
+
+      navigation.goBack();
     } catch (err) {
-      Alert.alert('Failed to save');
       console.log(err);
+      Alert.alert('Failed to save');
     } finally {
       setLoading(false);
     }
@@ -106,11 +137,16 @@ export default function Add() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Add New Bookmark</Text>
+      <Text style={styles.title}>
+        {editingArticle
+          ? 'Edit Bookmark'
+          : 'Add New Bookmark'}
+      </Text>
 
+      {/* URL */}
       <View style={styles.inputBox}>
         <Text style={styles.label}>
-          Article URL <Text style={styles.required}>*</Text>
+          Article URL *
         </Text>
         <TextInput
           style={styles.input}
@@ -122,13 +158,16 @@ export default function Add() {
           placeholder="https://example.com/article"
           placeholderTextColor="grey"
         />
-        {errors.url ? <Text style={styles.errorText}>{errors.url}</Text> : null}
+        {errors.url ? (
+          <Text style={styles.errorText}>
+            {errors.url}
+          </Text>
+        ) : null}
       </View>
 
+      {/* Title */}
       <View style={styles.inputBox}>
-        <Text style={styles.label}>
-          Title <Text style={styles.required}>*</Text>
-        </Text>
+        <Text style={styles.label}>Title *</Text>
         <TextInput
           style={styles.input}
           value={title}
@@ -140,27 +179,42 @@ export default function Add() {
           placeholderTextColor="grey"
         />
         {errors.title ? (
-          <Text style={styles.errorText}>{errors.title}</Text>
+          <Text style={styles.errorText}>
+            {errors.title}
+          </Text>
         ) : null}
       </View>
 
+      {/* Description */}
       <View style={styles.inputBox}>
         <Text style={styles.label}>
-          Description <Text style={styles.hint}>(optional)</Text>
+          Description *
         </Text>
         <TextInput
           style={styles.descriptionInput}
           value={description}
-          onChangeText={setDescription}
+          onChangeText={text => {
+            setDescription(text);
+            setErrors(prev => ({
+              ...prev,
+              description: '',
+            }));
+          }}
           multiline
-          placeholder="Enter a brief description..."
+          placeholder="Enter description..."
           placeholderTextColor="grey"
         />
+        {errors.description ? (
+          <Text style={styles.errorText}>
+            {errors.description}
+          </Text>
+        ) : null}
       </View>
 
+      {/* Category */}
       <View style={styles.categoryBox}>
         <Text style={styles.label}>
-          Category <Text style={styles.required}>*</Text>
+          Category *
         </Text>
 
         <View style={styles.chipContainer}>
@@ -169,17 +223,22 @@ export default function Add() {
               key={cat}
               onPress={() => {
                 setSelectedCategory(cat);
-                setErrors(prev => ({ ...prev, category: '' }));
+                setErrors(prev => ({
+                  ...prev,
+                  category: '',
+                }));
               }}
               style={[
                 styles.chip,
-                selectedCategory === cat && styles.activeChip,
+                selectedCategory === cat &&
+                  styles.activeChip,
               ]}
             >
               <Text
                 style={[
                   styles.chipText,
-                  selectedCategory === cat && styles.activeChipText,
+                  selectedCategory === cat &&
+                    styles.activeChipText,
                 ]}
               >
                 {cat}
@@ -188,34 +247,59 @@ export default function Add() {
           ))}
 
           <TouchableOpacity
-            onPress={() => setShowCategoryInput(true)}
+            onPress={() =>
+              setShowCategoryInput(true)
+            }
             style={styles.addChip}
           >
-            <Text style={styles.addText}>+</Text>
+            <Text style={styles.addText}>
+              +
+            </Text>
           </TouchableOpacity>
         </View>
 
         {errors.category ? (
-          <Text style={styles.errorText}>{errors.category}</Text>
+          <Text style={styles.errorText}>
+            {errors.category}
+          </Text>
         ) : null}
 
         {showCategoryInput && (
           <View style={styles.addCategoryRow}>
             <TextInput
-              style={[styles.input, { flex: 1 }]}
+              style={[
+                styles.input,
+                { flex: 1 },
+              ]}
               value={newCategory}
               onChangeText={setNewCategory}
               placeholder="Type category..."
               placeholderTextColor="grey"
             />
-            <TouchableOpacity onPress={addCategory} style={styles.addBtn}>
-              <Text style={{ color: '#fff' }}>Add</Text>
+            <TouchableOpacity
+              onPress={addCategory}
+              style={styles.addBtn}
+            >
+              <Text
+                style={{ color: '#fff' }}
+              >
+                Add
+              </Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      <Button title={loading ? 'Saving...' : 'Submit'} onPress={handleSubmit} />
+      <Button
+        title={
+          loading
+            ? 'Saving...'
+            : editingArticle
+            ? 'Update'
+            : 'Submit'
+        }
+        onPress={handleSubmit}
+      />
     </View>
   );
 }
@@ -226,10 +310,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F3E9',
     padding: 16,
   },
-
-  hint: { color: 'grey' },
-  required: { color: 'red' },
-
   title: {
     textAlign: 'center',
     fontSize: 20,
@@ -237,21 +317,17 @@ const styles = StyleSheet.create({
     color: '#3A2A1A',
     marginBottom: 10,
   },
-
   inputBox: { marginBottom: 15 },
-
   label: {
     fontWeight: '600',
     marginBottom: 6,
     color: '#333',
   },
-
   errorText: {
     color: 'red',
     fontSize: 12,
     marginTop: 4,
   },
-
   input: {
     borderColor: '#ccc',
     borderWidth: 1,
@@ -260,7 +336,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: '#000',
   },
-
   descriptionInput: {
     borderColor: '#ccc',
     borderWidth: 1,
@@ -271,15 +346,12 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     color: '#000',
   },
-
   categoryBox: { marginBottom: 15 },
-
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-
   chip: {
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -288,12 +360,11 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     backgroundColor: '#fff',
   },
-
-  activeChip: { backgroundColor: '#3A2A1A' },
-
+  activeChip: {
+    backgroundColor: '#3A2A1A',
+  },
   chipText: { color: '#333' },
   activeChipText: { color: '#fff' },
-
   addChip: {
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -303,36 +374,16 @@ const styles = StyleSheet.create({
     borderColor: '#aaa',
     backgroundColor: 'white',
   },
-
   addText: { fontWeight: 'bold' },
-
   addCategoryRow: {
     flexDirection: 'row',
     marginTop: 10,
     gap: 8,
   },
-
   addBtn: {
     backgroundColor: '#3A2A1A',
     paddingHorizontal: 12,
     justifyContent: 'center',
-    borderRadius: 8,
-  },
-
-  imagePicker: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    height: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderStyle: 'dashed',
-  },
-
-  image: {
-    width: '100%',
-    height: '100%',
     borderRadius: 8,
   },
 });
