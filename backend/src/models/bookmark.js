@@ -5,22 +5,25 @@ const bookmarkSchema = new mongoose.Schema(
     title: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     url: {
       type: String,
-      required: true
+      required: true,
     },
-    type: {
+    category: {
       type: String,
-      enum: ["article", "video", "podcast"],
-      default: "article"
+      required: true,
     },
     status: {
       type: String,
-      enum: ["unread", "read", "listened"],
-      default: "unread"
-    }
+      enum: ["unread", "read"],
+      default: "unread",
+    },
+    description: {
+      type: String,
+      required: true,
+    },
   },
   { timestamps: true }
 );

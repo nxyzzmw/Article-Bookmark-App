@@ -1,8 +1,15 @@
 import Bookmark from "../models/bookmark.js";
 
 export const addBookmark = async (data) => {
-  const { title, url, type } = data;
-  return await Bookmark.create({ title, url, type });
+  const { title, url, category, description, status } = data;
+
+  return await Bookmark.create({
+    title,
+    url,
+    category,
+    description,
+    status, // optional (default = "unread")
+  });
 };
 
 export const getAllBookmark = async (filters = {}) => {
@@ -14,7 +21,10 @@ export const getBookMarkById = async (id) => {
 };
 
 export const updateBookmark = async (id, data) => {
-  return await Bookmark.findByIdAndUpdate(id, data, { new: true });
+  return await Bookmark.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true, // IMPORTANT
+  });
 };
 
 export const deleteBookmark = async (id) => {

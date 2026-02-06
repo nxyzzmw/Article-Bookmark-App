@@ -1,8 +1,11 @@
 import * as bookmarkService from "../services/bookmark.service.js";
+import { matchedData } from "express-validator";
 
 export const addBookmark = async (req, res, next) => {
   try {
-    const bookmark = await bookmarkService.addBookmark(req.body);
+    const data = matchedData(req)
+    console.log(data)
+    const bookmark = await bookmarkService.addBookmark(data);
     res.status(201).json(bookmark);
   } catch (err) {
     next(err);
@@ -27,7 +30,9 @@ export const getAllBookmark = async (req, res, next) => {
 export const updateBookmark = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updatedBookmark = await bookmarkService.updateBookmark(id, req.body);
+    const data = matchedData(req)
+    console.log(data)
+    const updatedBookmark = await bookmarkService.updateBookmark(id, data);
     res.status(200).json(updatedBookmark);
   } catch (err) {
     next(err);
