@@ -1,17 +1,20 @@
 // Add.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Button,
   Alert,
 } from 'react-native';
 import axios from 'axios';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useRoute,
+  useNavigation,
+} from '@react-navigation/native';
 
 export default function Add() {
   const route = useRoute<any>();
@@ -19,6 +22,7 @@ export default function Add() {
 
   //  If coming from Edit → article exists
   const editingArticle = route.params?.article;
+  const isEditing = !!editingArticle;
 
   //  Pre-fill fields when editing
   const [url, setUrl] = useState(editingArticle?.url || '');
@@ -48,6 +52,48 @@ export default function Add() {
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const resetForm = () => {
+    setUrl('');
+    setTitle('');
+    setDescription('');
+    setSelectedCategory(null);
+    setShowCategoryInput(false);
+    setNewCategory('');
+    setErrors({
+      url: '',
+      title: '',
+      description: '',
+      category: '',
+    });
+  };
+
+  useEffect(() => {
+    if (editingArticle) {
+      setUrl(editingArticle.url || '');
+      setTitle(editingArticle.title || '');
+      setDescription(editingArticle.description || '');
+      setSelectedCategory(editingArticle.category || null);
+
+      if (editingArticle.category) {
+        setCategories(prev =>
+          prev.includes(editingArticle.category)
+            ? prev
+            : [...prev, editingArticle.category]
+        );
+      }
+    } else {
+      resetForm();
+    }
+  }, [editingArticle]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!editingArticle) {
+        resetForm();
+      }
+    }, [editingArticle])
+  );
 
   const addCategory = () => {
     if (!newCategory.trim()) return;
@@ -106,26 +152,30 @@ export default function Add() {
       description: description.trim(),
       category: selectedCategory,
     };
+        console.log(data)
 
     try {
       setLoading(true);
 
       if (editingArticle) {
-        // ✅ Update existing bookmark
+        // Update existing bookmark
         await axios.put(
-          `http://10.0.2.2:5000/bookmarks/${editingArticle._id}`,
+          `http://10.0.2.2:2000/api/bookmark/${editingArticle._id}`,
           data
         );
         Alert.alert('Updated!');
       } else {
-        // ✅ Create new bookmark
+        //  Create new bookmark
+        console.log("post")
         await axios.post(
-          'http://10.0.2.2:5000/bookmarks',
+          'http://10.0.2.2:2000/api/bookmark',
           data
         );
         Alert.alert('Saved!');
       }
 
+      resetForm();
+      navigation.setParams({ article: undefined });
       navigation.goBack();
     } catch (err) {
       console.log(err);
@@ -138,168 +188,187 @@ export default function Add() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>
-        {editingArticle
+        {isEditing
           ? 'Edit Bookmark'
           : 'Add New Bookmark'}
       </Text>
 
-      {/* URL */}
-      <View style={styles.inputBox}>
-        <Text style={styles.label}>
-          Article URL *
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={url}
-          onChangeText={text => {
-            setUrl(text);
-            setErrors(prev => ({ ...prev, url: '' }));
-          }}
-          placeholder="https://example.com/article"
-          placeholderTextColor="grey"
-        />
-        {errors.url ? (
-          <Text style={styles.errorText}>
-            {errors.url}
+      <View style={styles.formCard}>
+        {/* URL */}
+        <View style={styles.inputBox}>
+          <Text style={styles.label}>
+            Article URL *
           </Text>
-        ) : null}
-      </View>
-
-      {/* Title */}
-      <View style={styles.inputBox}>
-        <Text style={styles.label}>Title *</Text>
-        <TextInput
-          style={styles.input}
-          value={title}
-          onChangeText={text => {
-            setTitle(text);
-            setErrors(prev => ({ ...prev, title: '' }));
-          }}
-          placeholder="Enter article title"
-          placeholderTextColor="grey"
-        />
-        {errors.title ? (
-          <Text style={styles.errorText}>
-            {errors.title}
-          </Text>
-        ) : null}
-      </View>
-
-      {/* Description */}
-      <View style={styles.inputBox}>
-        <Text style={styles.label}>
-          Description *
-        </Text>
-        <TextInput
-          style={styles.descriptionInput}
-          value={description}
-          onChangeText={text => {
-            setDescription(text);
-            setErrors(prev => ({
-              ...prev,
-              description: '',
-            }));
-          }}
-          multiline
-          placeholder="Enter description..."
-          placeholderTextColor="grey"
-        />
-        {errors.description ? (
-          <Text style={styles.errorText}>
-            {errors.description}
-          </Text>
-        ) : null}
-      </View>
-
-      {/* Category */}
-      <View style={styles.categoryBox}>
-        <Text style={styles.label}>
-          Category *
-        </Text>
-
-        <View style={styles.chipContainer}>
-          {categories.map(cat => (
-            <TouchableOpacity
-              key={cat}
-              onPress={() => {
-                setSelectedCategory(cat);
-                setErrors(prev => ({
-                  ...prev,
-                  category: '',
-                }));
-              }}
-              style={[
-                styles.chip,
-                selectedCategory === cat &&
-                  styles.activeChip,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  selectedCategory === cat &&
-                    styles.activeChipText,
-                ]}
-              >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-
-          <TouchableOpacity
-            onPress={() =>
-              setShowCategoryInput(true)
-            }
-            style={styles.addChip}
-          >
-            <Text style={styles.addText}>
-              +
+          <TextInput
+            style={styles.input}
+            value={url}
+            onChangeText={text => {
+              setUrl(text);
+              setErrors(prev => ({ ...prev, url: '' }));
+            }}
+            placeholder="https://example.com/article"
+            placeholderTextColor="grey"
+          />
+          {errors.url ? (
+            <Text style={styles.errorText}>
+              {errors.url}
             </Text>
-          </TouchableOpacity>
+          ) : null}
         </View>
 
-        {errors.category ? (
-          <Text style={styles.errorText}>
-            {errors.category}
-          </Text>
-        ) : null}
+        {/* Title */}
+        <View style={styles.inputBox}>
+          <Text style={styles.label}>Title *</Text>
+          <TextInput
+            style={styles.input}
+            value={title}
+            onChangeText={text => {
+              setTitle(text);
+              setErrors(prev => ({ ...prev, title: '' }));
+            }}
+            placeholder="Enter article title"
+            placeholderTextColor="grey"
+          />
+          {errors.title ? (
+            <Text style={styles.errorText}>
+              {errors.title}
+            </Text>
+          ) : null}
+        </View>
 
-        {showCategoryInput && (
-          <View style={styles.addCategoryRow}>
-            <TextInput
-              style={[
-                styles.input,
-                { flex: 1 },
-              ]}
-              value={newCategory}
-              onChangeText={setNewCategory}
-              placeholder="Type category..."
-              placeholderTextColor="grey"
-            />
-            <TouchableOpacity
-              onPress={addCategory}
-              style={styles.addBtn}
-            >
-              <Text
-                style={{ color: '#fff' }}
+        {/* Description */}
+        <View style={styles.inputBox}>
+          <Text style={styles.label}>
+            Description *
+          </Text>
+          <TextInput
+            style={styles.descriptionInput}
+            value={description}
+            onChangeText={text => {
+              setDescription(text);
+              setErrors(prev => ({
+                ...prev,
+                description: '',
+              }));
+            }}
+            multiline
+            placeholder="Enter description..."
+            placeholderTextColor="grey"
+          />
+          {errors.description ? (
+            <Text style={styles.errorText}>
+              {errors.description}
+            </Text>
+          ) : null}
+        </View>
+
+        {/* Category */}
+        <View style={styles.categoryBox}>
+          <Text style={styles.label}>
+            Category *
+          </Text>
+
+          <View style={styles.chipContainer}>
+            {categories.map(cat => (
+              <TouchableOpacity
+                key={cat}
+                onPress={() => {
+                  setSelectedCategory(cat);
+                  setErrors(prev => ({
+                    ...prev,
+                    category: '',
+                  }));
+                }}
+                style={[
+                  styles.chip,
+                  selectedCategory === cat &&
+                    styles.activeChip,
+                ]}
               >
-                Add
+                <Text
+                  style={[
+                    styles.chipText,
+                    selectedCategory === cat &&
+                      styles.activeChipText,
+                  ]}
+                >
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              onPress={() =>
+                setShowCategoryInput(true)
+              }
+              style={styles.addChip}
+            >
+              <Text style={styles.addText}>
+                +
               </Text>
             </TouchableOpacity>
           </View>
-        )}
+
+          {errors.category ? (
+            <Text style={styles.errorText}>
+              {errors.category}
+            </Text>
+          ) : null}
+
+          {showCategoryInput && (
+            <View style={styles.addCategoryRow}>
+              <TextInput
+                style={[
+                  styles.input,
+                  { flex: 1 },
+                ]}
+                value={newCategory}
+                onChangeText={setNewCategory}
+                placeholder="Type category..."
+                placeholderTextColor="grey"
+              />
+              <TouchableOpacity
+                onPress={addCategory}
+                style={styles.addBtn}
+              >
+                <Text
+                  style={{ color: '#fff' }}
+                >
+                  Add
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
-      <Button
-        title={
-          loading
-            ? 'Saving...'
-            : editingArticle
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.cancelBtn]}
+          onPress={() => {
+            resetForm();
+            navigation.setParams({ article: undefined });
+            navigation.goBack();
+          }}
+        >
+          <Text style={styles.cancelText}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.submitBtn]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <Text style={styles.submitText}>
+            {loading
+              ? 'Saving...'
+            : isEditing
             ? 'Update'
-            : 'Submit'
-        }
-        onPress={handleSubmit}
-      />
+            : 'Submit'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -308,20 +377,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9F3E9',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 18,
   },
   title: {
     textAlign: 'center',
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#3A2A1A',
-    marginBottom: 10,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#2E241A',
+    marginBottom: 12,
+  },
+  formCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    elevation: 3,
+    marginBottom: 12,
   },
   inputBox: { marginBottom: 15 },
   label: {
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 6,
-    color: '#333',
+    color: '#5E5448',
   },
   errorText: {
     color: 'red',
@@ -329,22 +406,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   input: {
-    borderColor: '#ccc',
+    borderColor: '#E3D9CC',
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: '#fff',
-    color: '#000',
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#FFF',
+    color: '#2E241A',
   },
   descriptionInput: {
-    borderColor: '#ccc',
+    borderColor: '#E3D9CC',
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    height: 100,
+    borderRadius: 10,
+    padding: 12,
+    height: 110,
     backgroundColor: '#fff',
     textAlignVertical: 'top',
-    color: '#000',
+    color: '#2E241A',
   },
   categoryBox: { marginBottom: 15 },
   chipContainer: {
@@ -355,35 +432,64 @@ const styles = StyleSheet.create({
   chip: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 16,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
+    borderColor: '#E3D9CC',
+    backgroundColor: '#F7F2EA',
   },
   activeChip: {
-    backgroundColor: '#3A2A1A',
+    backgroundColor: '#2E241A',
+    borderColor: '#2E241A',
   },
-  chipText: { color: '#333' },
+  chipText: { color: '#5E5448', fontWeight: '600' },
   activeChipText: { color: '#fff' },
   addChip: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 16,
+    borderRadius: 999,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#aaa',
+    borderColor: '#C9BBA8',
     backgroundColor: 'white',
   },
-  addText: { fontWeight: 'bold' },
+  addText: { fontWeight: 'bold', color: '#6E5D4A' },
   addCategoryRow: {
     flexDirection: 'row',
     marginTop: 10,
     gap: 8,
   },
   addBtn: {
-    backgroundColor: '#3A2A1A',
+    backgroundColor: '#2E241A',
     paddingHorizontal: 12,
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#2E241A',
+  },
+  cancelText: {
+    color: '#2E241A',
+    fontWeight: '700',
+  },
+  submitBtn: {
+    backgroundColor: '#2E241A',
+  },
+  submitText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });

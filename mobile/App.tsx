@@ -1,22 +1,42 @@
-import { StatusBar, Text, View } from 'react-native';
+import { StatusBar, Text, View, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import MyTabs from './src/Navigations/AppStack';
 import { NavigationContainer } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { SearchProvider } from './src/context/SearchContext';
-import { useContext, useState } from 'react';
+import { useContext } from 'react';
 import { SearchContext } from './src/context/SearchContext';
-import { Modal, TextInput, TouchableOpacity } from 'react-native';
+import { TextInput, TouchableOpacity } from 'react-native';
 
 
-function MainApp() {
+function MainApp({ activeTab }: { activeTab: string }) {
  
-const { searchText, setSearchText } =
-  useContext(SearchContext);
+const {
+  homeSearchText,
+  setHomeSearchText,
+  readingSearchText,
+  setReadingSearchText,
+} = useContext(SearchContext);
 
-const [searchVisible, setSearchVisible] =
-  useState(false);
+const isHome = activeTab === 'Home';
+const isReading = activeTab === 'Readings';
+
+const activeSearchText = isHome
+  ? homeSearchText
+  : isReading
+  ? readingSearchText
+  : '';
+
+const setActiveSearchText = (text: string) => {
+  if (isHome) setHomeSearchText(text);
+  else if (isReading) setReadingSearchText(text);
+};
+
+useEffect(() => {
+  if (isHome) setHomeSearchText('');
+  if (isReading) setReadingSearchText('');
+}, [activeTab]);
 
   return (
     <View
@@ -27,84 +47,108 @@ const [searchVisible, setSearchVisible] =
     >
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
           backgroundColor: '#E7CBA3',
-          paddingVertical: 12,
+          paddingTop: 14,
+          paddingBottom: 12,
           paddingHorizontal: 16,
-          gap: 8,
+          gap: 12,
           borderBottomWidth: 1,
           borderBottomColor: '#E7CBA3',
         }}
       >
-        <Text
+        <View
           style={{
-            textAlign: 'center',
-            fontWeight: 'bold',
-            fontSize: 28,
-            color: '#3A2A1A',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          My Bookmarks
-        </Text>
-        <TouchableOpacity
-  onPress={() => setSearchVisible(true)}
-  style={{
-    position: 'absolute',
-    right: 20,
-    backgroundColor: '#ffffff',
-    padding: 5,
-    borderRadius: 20,
-    elevation: 8,
-  }}
->
-  <MaterialIcons
-    name="search"
-    size={22}
-    color="#D08B2A"
-  />
-</TouchableOpacity>
-<Modal visible={searchVisible} transparent>
-  <View
-    style={{
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      justifyContent: 'center',
-      padding: 20,
-    }}
-  >
-    <View
-      style={{
-        backgroundColor: 'white',
-        borderRadius: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 10,
-      }}
-    >
-      <TextInput
-        placeholder="Search bookmarks..."
-        placeholderTextColor={"grey"}
-        value={searchText}
-        onChangeText={setSearchText}
-        style={{ flex: 1, fontSize: 16 }}
-        autoFocus
-      />
+          <View>
+            <Text
+              style={{
+                fontSize: 12,
+                letterSpacing: 2,
+                color: '#8B7E6D',
+                fontWeight: '700',
+              }}
+            >
+              MY LIBRARY
+            </Text>
+            <Text
+              style={{
+                fontWeight: '800',
+                fontSize: 26,
+                color: '#2E241A',
+              }}
+            >
+              Bookmarks
+            </Text>
+          </View>
 
-      <TouchableOpacity
-        onPress={() => setSearchVisible(false)}
-      >
-        <MaterialIcons
-          name="close"
-          size={24}
-          color="black"
-        />
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: '#FFF6E8',
+              alignItems: 'center',
+              justifyContent: 'center',
+              elevation: 3,
+            }}
+          >
+            <MaterialIcons
+              name="bookmark"
+              size={22}
+              color="#D08B2A"
+            />
+          </View>
+        </View>
 
+        {(isHome || isReading) && (
+          <View
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 999,
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              elevation: 2,
+            }}
+          >
+            <MaterialIcons
+              name="search"
+              size={20}
+              color="#D08B2A"
+              style={{ marginRight: 8 }}
+            />
+            <TextInput
+              placeholder={
+                isHome
+                  ? 'Search bookmarks...'
+                  : 'Search reading...'
+              }
+              placeholderTextColor="grey"
+              value={activeSearchText}
+              onChangeText={setActiveSearchText}
+              style={{ flex: 1, fontSize: 16 }}
+            />
+            {!!activeSearchText && (
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveSearchText('');
+                  Keyboard.dismiss();
+                }}
+              >
+                <MaterialIcons
+                  name="close"
+                  size={20}
+                  color="black"
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
       {/*  Screens below */}
       <View style={{ flex: 1 }}>
@@ -114,6 +158,18 @@ const [searchVisible, setSearchVisible] =
   );
 }
 export default function App() {
+  const [activeTab, setActiveTab] =
+    useState('Home');
+
+  const getActiveRouteName = (state: any): string => {
+    if (!state) return 'Home';
+    const route = state.routes[state.index];
+    if (route.state) {
+      return getActiveRouteName(route.state);
+    }
+    return route.name;
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F9F3E9' }}>
       <StatusBar
@@ -121,11 +177,16 @@ export default function App() {
         backgroundColor="#F9F3E9"
         translucent={false}
       />
-          <NavigationContainer>
-  <SearchProvider>
-    <MainApp />
-  </SearchProvider>
-</NavigationContainer>
+      <NavigationContainer
+        onStateChange={state => {
+          const name = getActiveRouteName(state);
+          setActiveTab(name);
+        }}
+      >
+        <SearchProvider>
+          <MainApp activeTab={activeTab} />
+        </SearchProvider>
+      </NavigationContainer>
 
     </SafeAreaView>
   );

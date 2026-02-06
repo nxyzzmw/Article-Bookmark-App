@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,10 @@ import {
   Alert,
 } from 'react-native';
 import axios from 'axios';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SegmentedButtons } from 'react-native-paper';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { SearchContext } from '../context/SearchContext';
 
 interface Bookmark {
   _id: string;
@@ -19,13 +20,14 @@ interface Bookmark {
   description: string;
   url: string;
   category: string;
-  read: boolean;
+  status: 'unread' | 'read';
   createdAt: string;
-  finishedAt?: string;
+  updatedAt: string;
 }
 
 export default function Home() {
-  const navigation = useNavigation<any>();
+  const { readingSearchText, setReadingSearchText } =
+    useContext(SearchContext);
   const [articles, setArticles] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<'reading' | 'finished'>('reading');
@@ -52,12 +54,17 @@ export default function Home() {
     return 'Just now';
   };
 
-  const fetchBookmarks = async () => {
+  const fetchBookmarks = async (
+    status?: 'read' | 'unread'
+  ) => {
     try {
       setLoading(true);
 
+      const url = status
+        ? `http://10.0.2.2:2000/api/bookmark?status=${status}`
+        : 'http://10.0.2.2:2000/api/bookmark';
       const res = await axios.get(
-        'http://10.0.2.2:5000/bookmarks'
+        url
       );
 
       setArticles(
@@ -79,76 +86,105 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    fetchBookmarks();
-  }, []);
-
-  const toggleRead = async (
-    id: string,
-    current: boolean
-  ) => {
-    try {
-      await axios.patch(
-        `http://10.0.2.2:5000/bookmarks/${id}`,
-        { read: !current }
+  useFocusEffect(
+    useCallback(() => {
+      fetchBookmarks(
+        tab === 'finished' ? 'read' : 'unread'
       );
-      fetchBookmarks();
+    }, [tab])
+  );
+
+  const filteredArticles =
+    readingSearchText.trim() === ''
+      ? articles
+      : articles.filter(a => {
+          const q = readingSearchText.toLowerCase();
+          return (
+            a.title.toLowerCase().includes(q) ||
+            a.category.toLowerCase().includes(q) ||
+            a.description
+              .toLowerCase()
+              .includes(q) ||
+            a.url.toLowerCase().includes(q)
+          );
+        });
+
+  const openUrl = async (rawUrl?: string) => {
+    const trimmed = rawUrl?.trim();
+    if (!trimmed) {
+      Alert.alert(
+        'Invalid URL',
+        'This bookmark has no URL.'
+      );
+      return;
+    }
+
+    const hasScheme =
+      /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(
+        trimmed
+      );
+    const normalized = trimmed.replace(/\s+/g, '');
+    const candidates = hasScheme
+      ? [normalized]
+      : [`https://${normalized}`, `http://${normalized}`];
+
+    for (const url of candidates) {
+      const encoded = encodeURI(url);
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        Linking.openURL(encoded);
+        return;
+      }
+    }
+
+    try {
+      const fallback = encodeURI(candidates[0]);
+      await Linking.openURL(fallback);
+      return;
     } catch {
-      Alert.alert('Failed to update');
+      Alert.alert('Cannot open URL', normalized);
     }
   };
-
-  const deleteArticle = async (id: string) => {
-    Alert.alert('Delete', 'Are you sure?', [
-      { text: 'Cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await axios.delete(
-            `http://10.0.2.2:5000/bookmarks/${id}`
-          );
-          fetchBookmarks();
-        },
-      },
-    ]);
-  };
-
-  const updateArticle = (item: Bookmark) => {
-    navigation.navigate('Add', { article: item });
-  };
-
-  // ✅ Filter by tab
-  const filteredArticles = articles.filter(article =>
-    tab === 'reading'
-      ? !article.read
-      : article.read
-  );
 
   const renderCard = ({
     item,
   }: {
     item: Bookmark;
   }) => {
-    const timeLabel = item.read
-      ? `Finished ${getTimeAgo(
-          item.finishedAt ||
+    const timeLabel =
+      item.status === 'read'
+        ? `Finished ${getTimeAgo(
+            item.updatedAt || item.createdAt
+          )}`
+        : `Added ${getTimeAgo(
             item.createdAt
-        )}`
-      : `Added ${getTimeAgo(
-          item.createdAt
-        )}`;
+          )}`;
 
     return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() =>
-          Linking.openURL(item.url)
-        }
-      >
+      <View style={styles.card}>
         <Text style={styles.title}>
           {item.title}
         </Text>
+
+        <View style={styles.metaRow}>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              {item.category}
+            </Text>
+          </View>
+          {item.status === 'read' && (
+            <View style={styles.readBadge}>
+              <MaterialIcons
+                name="check-circle"
+                size={14}
+                color="#1E9C4B"
+              />
+              <Text style={styles.readBadgeText}>
+                Read
+              </Text>
+            </View>
+          )}
+        </View>
 
         {item.description && (
           <Text style={styles.desc}>
@@ -156,80 +192,20 @@ export default function Home() {
           </Text>
         )}
 
-        <Text style={styles.category}>
-          {item.category}
-        </Text>
-
-        {/* ✅ Time label */}
+        {/*  Time label */}
         <Text style={styles.timeText}>
           {timeLabel}
         </Text>
 
         <TouchableOpacity
-          style={styles.row}
-          onPress={() =>
-            toggleRead(
-              item._id,
-              item.read
-            )
-          }
+          style={styles.openBtn}
+          onPress={() => openUrl(item.url)}
         >
-          <MaterialIcons
-            name={
-              item.read
-                ? 'check-circle'
-                : 'radio-button-unchecked'
-            }
-            size={22}
-            color={
-              item.read
-                ? 'green'
-                : '#555'
-            }
-          />
-          <Text style={styles.readText}>
-            {item.read
-              ? ' Read'
-              : ' Mark as Read'}
+          <Text style={styles.openText}>
+            Open
           </Text>
         </TouchableOpacity>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.iconRow}
-            onPress={() =>
-              updateArticle(item)
-            }
-          >
-            <MaterialIcons
-              name="edit"
-              size={22}
-              color="#3A2A1A"
-            />
-            <Text style={styles.edit}>
-              {' '}
-              Edit
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.iconRow}
-            onPress={() =>
-              deleteArticle(item._id)
-            }
-          >
-            <MaterialIcons
-              name="delete"
-              size={22}
-              color="red"
-            />
-            <Text style={styles.delete}>
-              {' '}
-              Delete
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -237,13 +213,14 @@ export default function Home() {
     <View style={styles.container}>
       <SegmentedButtons
         value={tab}
-        onValueChange={value =>
+        onValueChange={value => {
+          setReadingSearchText('');
           setTab(
             value as
               | 'reading'
               | 'finished'
-          )
-        }
+          );
+        }}
         buttons={[
           {
             value: 'reading',
@@ -266,10 +243,7 @@ export default function Home() {
               },
           },
         ]}
-        style={{
-          margin: 10,
-          marginTop: 30,
-        }}
+        style={styles.segmented}
       />
 
       <FlatList
@@ -282,10 +256,9 @@ export default function Home() {
         onRefresh={
           fetchBookmarks
         }
+        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text
-            style={styles.empty}
-          >
+          <Text style={styles.empty}>
             {tab === 'reading'
               ? 'No articles to read'
               : 'No finished articles'}
@@ -303,61 +276,85 @@ const styles =
       backgroundColor:
         '#F9F3E9',
     },
+    segmented: {
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 4,
+    },
+    listContent: {
+      paddingBottom: 96,
+    },
     card: {
-      backgroundColor:
-        '#fff',
-      margin: 10,
-      padding: 15,
-      borderRadius: 12,
+      backgroundColor: '#fff',
+      marginHorizontal: 16,
+      marginTop: 12,
+      padding: 16,
+      borderRadius: 18,
       elevation: 3,
     },
     title: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#3A2A1A',
+      fontSize: 17,
+      fontWeight: '700',
+      color: '#2E241A',
+      marginBottom: 6,
     },
     desc: {
-      marginVertical: 5,
-      color: '#333',
-    },
-    category: {
-      fontSize: 12,
-      color: '#888',
+      color: '#5E5448',
+      marginTop: 6,
+      marginBottom: 10,
+      lineHeight: 19,
     },
     timeText: {
       fontSize: 12,
-      color: '#666',
-      marginBottom: 6,
+      color: '#8B7E6D',
+      marginTop: 4,
     },
-    readText: {
-      fontWeight: '600',
-      marginLeft: 5,
-    },
-    row: {
+    metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: 8,
     },
-    iconRow: {
+    chip: {
+      backgroundColor: '#EFE7DB',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+    },
+    chipText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#7C6A55',
+      letterSpacing: 0.5,
+    },
+    readBadge: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#E9F7EE',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
     },
-    actions: {
-      flexDirection: 'row',
-      justifyContent:
-        'space-between',
-      marginTop: 10,
-    },
-    edit: {
-      color: '#3A2A1A',
-      fontWeight: '600',
-    },
-    delete: {
-      color: 'red',
-      fontWeight: '600',
+    readBadgeText: {
+      color: '#1E9C4B',
+      fontWeight: '700',
+      fontSize: 11,
     },
     empty: {
       textAlign: 'center',
       marginTop: 50,
       color: '#777',
+    },
+    openBtn: {
+      alignSelf: 'flex-start',
+      backgroundColor: '#2E241A',
+      paddingVertical: 9,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      marginTop: 12,
+    },
+    openText: {
+      color: '#fff',
+      fontWeight: '700',
     },
   });

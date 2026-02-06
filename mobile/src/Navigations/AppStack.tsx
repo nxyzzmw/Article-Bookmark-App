@@ -2,21 +2,22 @@ import Home from '../Screens/Home';
 import Add from '../Screens/Add';
 import Reading from '../Screens/Reading';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 
 const Tab = createBottomTabNavigator();
 
-const HomeIcon = ({ color, size }: { color: string; size: number }) => (
-  <MaterialIcons name="home" color={color} size={size} />
+const HomeIcon = ({ color, size }: any) => (
+  <MaterialIcons name="home" color={color} size={size + 8} />
 );
 
-const ProfileIcon = ({ color, size }: { color: string; size: number }) => (
-  <MaterialIcons name="add" color={color} size={size} />
+const AddIcon = ({ color, size }: any) => (
+  <MaterialIcons name="control-point" color={color} size={size + 6} />
 );
 
-const SettingsIcon = ({ color, size }: { color: string; size: number }) => (
-  <MaterialIcons name="book" color={color} size={size} />
+const ReadingIcon = ({ color, size }: any) => (
+  <MaterialIcons name="book" color={color} size={size + 8} />
 );
 
 export default function MyTabs() {
@@ -24,51 +25,37 @@ export default function MyTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
+        tabBarActiveTintColor: '#2E241A',
+        tabBarInactiveTintColor: '#B8A38A',
+
         tabBarStyle: {
-          backgroundColor: '#E7CBA3',
+          backgroundColor: 'transparent',
           borderTopWidth: 0,
-          elevation: 5,
-          borderRadius: 999,
-          width: 300,
-          alignSelf: 'center',
-          overflow: 'hidden',
+          elevation: 0,
+          height: 50,
+          position: 'absolute',
+          marginHorizontal: 50,
+          bottom: 10,
         },
-        tabBarActiveTintColor: '#dd8d1dff',
-        tabBarInactiveTintColor: '#8B6E4A',
+
+        tabBarBackground: () => (
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: '#FDF7EE',
+              borderRadius: 40,
+              elevation: 6,
+            }}
+          />
+        ),
       }}
     >
-      <Tab.Screen
-        name="Home"
-        component={Home}
-        options={{
-          tabBarIcon: HomeIcon,
-          tabBarLabel: 'Home',
-          tabBarItemStyle: { borderRadius: 999 },
-          tabBarActiveBackgroundColor: '#ffffffff',
-        }}
-      />
+      <Tab.Screen name="Home" component={Home} options={{ tabBarIcon: HomeIcon }} />
 
-      <Tab.Screen
-        name="Add"
-        component={Add}
-        options={{
-          tabBarIcon: ProfileIcon,
-          tabBarLabel: 'Add',
-          tabBarItemStyle: { borderRadius: 999 },
-          tabBarActiveBackgroundColor: '#ffffffff',
-        }}
-      />
+      <Tab.Screen name="Add" component={Add} options={{ tabBarIcon: AddIcon }} />
 
-      <Tab.Screen
-        name="Readings"
-        component={Reading}
-        options={{
-          tabBarIcon: SettingsIcon,
-          tabBarLabel: 'Readings',
-          tabBarItemStyle: { borderRadius: 50 },
-          tabBarActiveBackgroundColor: '#ffffffff',
-        }}
-      />
+      <Tab.Screen name="Readings" component={Reading} options={{ tabBarIcon: ReadingIcon }} />
     </Tab.Navigator>
   );
 }
