@@ -5,19 +5,11 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Image,
   Button,
   Alert,
-  PermissionsAndroid,
-  Platform,
 } from 'react-native';
 
-import {
-  launchCamera,
-  launchImageLibrary,
-} from 'react-native-image-picker';
-
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import {} from 'react-native-image-picker';
 import axios from 'axios';
 
 export default function Add() {
@@ -41,60 +33,7 @@ export default function Add() {
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [newCategory, setNewCategory] = useState('');
 
-  const [coverImage, setCoverImage] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  const requestCameraPermission = async () => {
-    if (Platform.OS !== 'android') return true;
-
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    } catch {
-      return false;
-    }
-  };
-
-  const openCamera = async () => {
-    const hasPermission =
-      Platform.OS === 'android'
-        ? await requestCameraPermission()
-        : true;
-
-    if (!hasPermission) {
-      Alert.alert('Permission denied');
-      return;
-    }
-
-    const result = await launchCamera({
-      mediaType: 'photo',
-      quality: 0.7,
-    });
-
-    if (result.assets?.[0]?.uri) {
-      setCoverImage(result.assets[0].uri);
-    }
-  };
-
-  const openGallery = async () => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-    });
-
-    if (result.assets?.[0]?.uri) {
-      setCoverImage(result.assets[0].uri);
-    }
-  };
-
-  const pickImage = () => {
-    Alert.alert('Upload Cover Image', 'Choose option', [
-      { text: 'Camera', onPress: openCamera },
-      { text: 'Gallery', onPress: openGallery },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   const addCategory = () => {
     if (!newCategory.trim()) return;
@@ -155,7 +94,7 @@ export default function Add() {
 
     try {
       setLoading(true);
-      await axios.post('http://10.0.2.2:5000/bookmarks', data);//jana TODO endpoints
+      await axios.post('http://10.0.2.2:5000/bookmarks', data); //jana TODO endpoints
       Alert.alert('Saved!');
     } catch (err) {
       Alert.alert('Failed to save');
@@ -183,9 +122,7 @@ export default function Add() {
           placeholder="https://example.com/article"
           placeholderTextColor="grey"
         />
-        {errors.url ? (
-          <Text style={styles.errorText}>{errors.url}</Text>
-        ) : null}
+        {errors.url ? <Text style={styles.errorText}>{errors.url}</Text> : null}
       </View>
 
       <View style={styles.inputBox}>
@@ -271,43 +208,14 @@ export default function Add() {
               placeholder="Type category..."
               placeholderTextColor="grey"
             />
-            <TouchableOpacity
-              onPress={addCategory}
-              style={styles.addBtn}
-            >
+            <TouchableOpacity onPress={addCategory} style={styles.addBtn}>
               <Text style={{ color: '#fff' }}>Add</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      <View style={styles.inputBox}>
-        <Text style={styles.label}>
-          Cover Image <Text style={styles.hint}>(optional)</Text>
-        </Text>
-
-        <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
-          {coverImage ? (
-            <Image source={{ uri: coverImage }} style={styles.image} />
-          ) : (
-            <View style={{ alignItems: 'center' }}>
-              <MaterialIcons
-                name="add-photo-alternate"
-                size={40}
-                color="#777"
-              />
-              <Text style={{ color: '#777' }}>
-                Upload Cover Image
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <Button
-        title={loading ? 'Saving...' : 'Submit'}
-        onPress={handleSubmit}
-      />
+      <Button title={loading ? 'Saving...' : 'Submit'} onPress={handleSubmit} />
     </View>
   );
 }
