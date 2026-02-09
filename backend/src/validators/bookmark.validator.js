@@ -10,7 +10,7 @@ export const addBookmarkValidator = [
 
   body("url")
     .notEmpty().withMessage("URL is required")
-    .isURL().withMessage("Invalid URL"),
+    .isURL({ require_tld: false }).withMessage("Invalid URL"),
 
   body("category")
     .notEmpty().withMessage("Category is required")

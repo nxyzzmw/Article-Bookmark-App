@@ -1,4 +1,5 @@
 import React, { useCallback, useContext, useState } from 'react';
+import { API_BASE } from '../config/api';
 import {
   View,
   Text,
@@ -40,7 +41,7 @@ export default function Home() {
       setLoading(true);
 
       const res = await axios.get(
-        'http://10.0.2.2:2000/api/bookmark'
+        `${API_BASE}/api/bookmark`
       );
 
       setArticles(
@@ -89,7 +90,7 @@ export default function Home() {
     );
     try {
       await axios.put(
-        `http://10.0.2.2:2000/api/bookmark/${id}`,
+        `${API_BASE}/api/bookmark/${id}`,
         { status: nextStatus }
       );
       fetchBookmarks();
@@ -113,7 +114,7 @@ export default function Home() {
         style: 'destructive',
         onPress: async () => {
           await axios.delete(
-            `http://10.0.2.2:2000/api/bookmark/${id}`
+            `${API_BASE}/api/bookmark/${id}`
           );
           fetchBookmarks();
         },

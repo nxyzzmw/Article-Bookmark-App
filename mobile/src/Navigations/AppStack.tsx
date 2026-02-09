@@ -1,6 +1,7 @@
 import Home from '../Screens/Home';
 import Add from '../Screens/Add';
 import Reading from '../Screens/Reading';
+import Dice from "../Screens/dice"
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -18,6 +19,10 @@ const AddIcon = ({ color, size }: any) => (
 
 const ReadingIcon = ({ color, size }: any) => (
   <MaterialIcons name="book" color={color} size={size + 8} />
+);
+
+const DiceIcon = ({ color, size }: any) => (
+  <MaterialIcons name="casino" color={color} size={size + 8} />
 );
 
 export default function MyTabs() {
@@ -56,6 +61,8 @@ export default function MyTabs() {
       <Tab.Screen name="Add" component={Add} options={{ tabBarIcon: AddIcon }} />
 
       <Tab.Screen name="Readings" component={Reading} options={{ tabBarIcon: ReadingIcon }} />
+            <Tab.Screen name="Dice" component={Dice} options={{ tabBarIcon: DiceIcon }} />
+
     </Tab.Navigator>
   );
 }

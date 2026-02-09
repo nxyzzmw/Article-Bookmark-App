@@ -1,6 +1,7 @@
 // Add.tsx
 
 import React, { useEffect, useState } from 'react';
+import { API_BASE } from '../config/api';
 import {
   View,
   Text,
@@ -160,7 +161,7 @@ export default function Add() {
       if (editingArticle) {
         // Update existing bookmark
         await axios.put(
-          `http://10.0.2.2:2000/api/bookmark/${editingArticle._id}`,
+          `${API_BASE}/api/bookmark/${editingArticle._id}`,
           data
         );
         Alert.alert('Updated!');
@@ -168,7 +169,7 @@ export default function Add() {
         //  Create new bookmark
         console.log("post")
         await axios.post(
-          'http://10.0.2.2:2000/api/bookmark',
+          `${API_BASE}/api/bookmark`,
           data
         );
         Alert.alert('Saved!');

@@ -1,4 +1,5 @@
 import React, { useCallback, useContext, useState } from 'react';
+import { API_BASE } from '../config/api';
 import {
   View,
   Text,
@@ -61,8 +62,8 @@ export default function Home() {
       setLoading(true);
 
       const url = status
-        ? `http://10.0.2.2:2000/api/bookmark?status=${status}`
-        : 'http://10.0.2.2:2000/api/bookmark';
+        ? `${API_BASE}/api/bookmark?status=${status}`
+        : `${API_BASE}/api/bookmark`;
       const res = await axios.get(
         url
       );
